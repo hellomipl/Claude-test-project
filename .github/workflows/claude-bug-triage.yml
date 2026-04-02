@@ -20,6 +20,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Claude triage
+        id: claude
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
@@ -33,18 +34,70 @@ jobs:
             Issue body:
             ${{ github.event.issue.body }}
 
-            Task:
-            1. Read CLAUDE.md and use repository context.
-            2. Analyze the likely root cause.
-            3. Identify the likely impacted modules/files.
-            4. Post a concise issue comment with:
-               - summary
-               - likely root cause
-               - impacted modules/files
-               - suggested fix options
-               - confidence: low/medium/high
-            5. Do not edit code.
-            6. Do not open a PR.
+            Read CLAUDE.md and repository context.
+
+            Analyze this bug and return:
+            - summary
+            - likely_root_cause
+            - impacted_modules_files
+            - suggested_fix_options
+            - confidence
 
           claude_args: |
             --max-turns 6
+            --json-schema {
+              "type":"object",
+              "properties":{
+                "summary":{"type":"string"},
+                "likely_root_cause":{"type":"string"},
+                "impacted_modules_files":{
+                  "type":"array",
+                  "items":{"type":"string"}
+                },
+                "suggested_fix_options":{
+                  "type":"array",
+                  "items":{"type":"string"}
+                },
+                "confidence":{"type":"string"}
+              },
+              "required":[
+                "summary",
+                "likely_root_cause",
+                "impacted_modules_files",
+                "suggested_fix_options",
+                "confidence"
+              ]
+            }
+
+      - name: Post triage comment
+        uses: actions/github-script@v8
+        env:
+          CLAUDE_OUTPUT: ${{ steps.claude.outputs.structured_output }}
+        with:
+          script: |
+            const data = JSON.parse(process.env.CLAUDE_OUTPUT);
+
+            const body = [
+              "## Claude triage",
+              "",
+              `**Summary**`,
+              data.summary,
+              "",
+              `**Likely root cause**`,
+              data.likely_root_cause,
+              "",
+              `**Impacted modules/files**`,
+              ...(data.impacted_modules_files || []).map(x => `- ${x}`),
+              "",
+              `**Suggested fix options**`,
+              ...(data.suggested_fix_options || []).map(x => `- ${x}`),
+              "",
+              `**Confidence**: ${data.confidence}`
+            ].join("\n");
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
