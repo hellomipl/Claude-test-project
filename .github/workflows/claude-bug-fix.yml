@@ -24,6 +24,7 @@ jobs:
         uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
           prompt: |
             A bug issue has been approved for implementation.
 
@@ -43,5 +44,6 @@ jobs:
             4. Create a pull request with the fix.
             5. Do not merge the PR.
             6. Keep changes minimal and focused only on this bug.
-          claude_args: |
-            --max-turns 10
+          claude_args: >-
+            --max-turns 20
+            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh pr *),Bash(gh issue *),Bash(npm:*),Bash(node:*)
