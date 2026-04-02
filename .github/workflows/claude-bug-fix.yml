@@ -8,6 +8,7 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
+  id-token: write
 
 jobs:
   fix:
@@ -24,7 +25,7 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
-            This bug has been approved for an automated fix.
+            A bug issue has been approved for implementation.
 
             Repository: ${{ github.repository }}
             Issue #${{ github.event.issue.number }}
@@ -33,16 +34,14 @@ jobs:
             Issue body:
             ${{ github.event.issue.body }}
 
-            Task:
-            1. Read CLAUDE.md and repository context.
-            2. Implement the smallest safe fix.
-            3. Update or add tests if needed.
-            4. Create a pull request linked to this issue.
-            5. In the PR body, include:
-               - root cause
-               - files changed
-               - test impact
-               - any risks or follow-ups
+            Read CLAUDE.md and repository context.
 
+            Task:
+            1. Understand the bug from the issue.
+            2. Implement the smallest safe fix in the codebase.
+            3. Update tests if needed.
+            4. Create a pull request with the fix.
+            5. Do not merge the PR.
+            6. Keep changes minimal and focused only on this bug.
           claude_args: |
             --max-turns 10
