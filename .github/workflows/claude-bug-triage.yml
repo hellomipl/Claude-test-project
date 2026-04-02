@@ -1,0 +1,49 @@
+name: Claude Bug Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  triage:
+    if: github.event.issue.pull_request == null
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Claude triage
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            A new bug issue was created.
+
+            Repository: ${{ github.repository }}
+            Issue #${{ github.event.issue.number }}
+            Title: ${{ github.event.issue.title }}
+
+            Issue body:
+            ${{ github.event.issue.body }}
+
+            Task:
+            1. Read CLAUDE.md and use repository context.
+            2. Analyze the likely root cause.
+            3. Identify the likely impacted modules/files.
+            4. Post a concise issue comment with:
+               - summary
+               - likely root cause
+               - impacted modules/files
+               - suggested fix options
+               - confidence: low/medium/high
+            5. Do not edit code.
+            6. Do not open a PR.
+
+          claude_args: |
+            --max-turns 6
