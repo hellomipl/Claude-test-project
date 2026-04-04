@@ -2,17 +2,16 @@ name: Claude Bug Fix
 
 on:
   issues:
-    types: [labeled]
+    types: [opened]
 
 permissions:
   contents: write
-  pull-requests: write
   issues: write
   id-token: write
 
 jobs:
   fix:
-    if: github.event.issue.pull_request == null && github.event.label.name == 'claude-fix-approved'
+    if: github.event.issue.pull_request == null
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -20,43 +19,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Claude fix
-        uses: anthropics/claude-code-action@v1
+      - name: Generate branch name
+        id: branch
+        uses: actions/github-script@v8
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          show_full_output: true
-          prompt: |
-            A bug issue has been approved for implementation.
+          result-encoding: string
+          script: |
+            const number = context.issue.number;
+            const title = context.payload.issue.title;
+            const slug = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '')
+              .substring(0, 50);
+            return `fix/${number}-${slug}`;
 
-            Repository: ${{ github.repository }}
-            Issue #${{ github.event.issue.number }}
-            Title: ${{ github.event.issue.title }}
+      - name: Create and push branch
+        run: |
+          git checkout -b ${{ steps.branch.outputs.result }}
+          git push origin ${{ steps.branch.outputs.result }}
 
-            Issue body:
-            ${{ github.event.issue.body }}
-
-            Read CLAUDE.md and repository context.
-
-            Task:
-            1. Understand the bug from the issue.
-            2. Implement the smallest safe fix in the codebase.
-            3. Update tests if needed.
-            4. Create a pull request with the fix.
-            5. In the PR body, include this exact line:
-               Issue: #${{ github.event.issue.number }}
-            6. Do not use Fixes/Closes keywords.
-            7. Do not merge the PR.
-            8. Keep changes minimal and focused only on this bug.
-          claude_args: >-
-            --max-turns 20
-            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh pr *),Bash(gh issue *),Bash(npm:*),Bash(node:*)
-
-      - name: Move issue card to Pending approval
+      - name: Move issue card to To triage
         uses: actions/github-script@v8
         env:
           PROJECT_ID: ${{ vars.PROJECT_ID }}
           STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
-          PENDING_APPROVAL_OPTION_ID: ${{ vars.PENDING_APPROVAL_OPTION_ID }}
+          TO_TRIAGE_OPTION_ID: ${{ vars.TO_TRIAGE_OPTION_ID }}
         with:
           github-token: ${{ secrets.PROJECT_PAT }}
           script: |
@@ -66,7 +56,7 @@ jobs:
 
             const projectId = process.env.PROJECT_ID;
             const statusFieldId = process.env.STATUS_FIELD_ID;
-            const optionId = process.env.PENDING_APPROVAL_OPTION_ID;
+            const optionId = process.env.TO_TRIAGE_OPTION_ID;
 
             const result = await github.graphql(`
               query($owner:String!, $repo:String!, $number:Int!) {
@@ -75,19 +65,103 @@ jobs:
                     projectItems(first: 20) {
                       nodes {
                         id
-                        project {
-                          id
-                        }
+                        project { id }
                       }
                     }
                   }
                 }
               }
+            `, { owner, repo, number: issueNumber });
+
+            const item = result.repository.issue.projectItems.nodes.find(
+              n => n.project.id === projectId
+            );
+
+            if (!item) {
+              console.log("Issue not yet in project, skipping status move.");
+              return;
+            }
+
+            await github.graphql(`
+              mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item { id }
+                }
+              }
             `, {
-              owner,
-              repo,
-              number: issueNumber
+              projectId,
+              itemId: item.id,
+              fieldId: statusFieldId,
+              optionId
             });
+
+      - name: Claude triage and fix
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+          prompt: |
+            A new bug issue has been created.
+
+            Repository: ${{ github.repository }}
+            Issue #${{ github.event.issue.number }}
+            Title: ${{ github.event.issue.title }}
+            Branch: ${{ steps.branch.outputs.result }}
+
+            Issue body:
+            ${{ github.event.issue.body }}
+
+            Read CLAUDE.md and repository context.
+
+            Task:
+            1. First, analyze the bug: identify the likely root cause, impacted modules/files, and your fix approach. Post this analysis as a comment on the issue.
+            2. Then, checkout the branch: git checkout ${{ steps.branch.outputs.result }}
+            3. Implement the smallest safe fix on this branch.
+            4. Update or add tests if needed.
+            5. Commit all changes directly to the branch and push.
+            6. Do NOT create a pull request.
+            7. Do NOT merge anything to main.
+            8. Keep changes minimal and focused only on this bug.
+          claude_args: >-
+            --max-turns 20
+            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh issue *),Bash(npm:*),Bash(node:*)
+
+      - name: Move issue card to In progress
+        uses: actions/github-script@v8
+        env:
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
+          IN_PROGRESS_OPTION_ID: ${{ vars.IN_PROGRESS_OPTION_ID }}
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.issue.number;
+
+            const projectId = process.env.PROJECT_ID;
+            const statusFieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.IN_PROGRESS_OPTION_ID;
+
+            const result = await github.graphql(`
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  issue(number:$number) {
+                    projectItems(first: 20) {
+                      nodes {
+                        id
+                        project { id }
+                      }
+                    }
+                  }
+                }
+              }
+            `, { owner, repo, number: issueNumber });
 
             const item = result.repository.issue.projectItems.nodes.find(
               n => n.project.id === projectId
@@ -106,9 +180,66 @@ jobs:
                   fieldId: $fieldId,
                   value: { singleSelectOptionId: $optionId }
                 }) {
-                  projectV2Item {
-                    id
+                  projectV2Item { id }
+                }
+              }
+            `, {
+              projectId,
+              itemId: item.id,
+              fieldId: statusFieldId,
+              optionId
+            });
+
+      - name: Move issue card to Review
+        uses: actions/github-script@v8
+        env:
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
+          REVIEW_OPTION_ID: ${{ vars.REVIEW_OPTION_ID }}
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.issue.number;
+
+            const projectId = process.env.PROJECT_ID;
+            const statusFieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.REVIEW_OPTION_ID;
+
+            const result = await github.graphql(`
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  issue(number:$number) {
+                    projectItems(first: 20) {
+                      nodes {
+                        id
+                        project { id }
+                      }
+                    }
                   }
+                }
+              }
+            `, { owner, repo, number: issueNumber });
+
+            const item = result.repository.issue.projectItems.nodes.find(
+              n => n.project.id === projectId
+            );
+
+            if (!item) {
+              core.setFailed("Issue is not in the target project.");
+              return;
+            }
+
+            await github.graphql(`
+              mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item { id }
                 }
               }
             `, {
