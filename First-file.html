@@ -5,46 +5,144 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
   <style>
-    .error { color: red; font-size: 0.85em; display: none; }
-    .error.visible { display: block; }
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f0f2f5;
+      font-family: Arial, sans-serif;
+    }
+
+    .login-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+      padding: 2rem 2.5rem;
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .login-card h2 {
+      margin: 0 0 1.5rem;
+      font-size: 1.5rem;
+      color: #1a1a2e;
+      text-align: center;
+    }
+
+    .field {
+      margin-bottom: 1.25rem;
+    }
+
+    .field label {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.6rem 0.75rem;
+      border: 1.5px solid #ccc;
+      border-radius: 5px;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+      outline: none;
+    }
+
+    .field input:focus {
+      border-color: #4a90e2;
+    }
+
+    .field input.invalid {
+      border-color: #e53e3e;
+      background: #fff5f5;
+    }
+
+    .error {
+      display: none;
+      align-items: center;
+      gap: 0.3rem;
+      margin-top: 0.35rem;
+      font-size: 0.8rem;
+      color: #e53e3e;
+    }
+
+    .error.visible {
+      display: flex;
+    }
+
+    .error::before {
+      content: "⚠";
+      font-size: 0.85rem;
+    }
+
+    button[type="submit"] {
+      width: 100%;
+      padding: 0.7rem;
+      background: #4a90e2;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 0.5rem;
+    }
+
+    button[type="submit"]:hover {
+      background: #357abd;
+    }
   </style>
 </head>
 <body>
-  <form id="login-form" novalidate>
-    <h2>Login</h2>
-    <div>
-      <label for="username">Username</label>
-      <input type="text" id="username" name="username">
-      <span class="error" id="username-error">Username is required.</span>
-    </div>
-    <div>
-      <label for="password">Password</label>
-      <input type="password" id="password" name="password">
-      <span class="error" id="password-error">Password must be at least 6 characters.</span>
-    </div>
-    <button type="submit">Login</button>
-  </form>
+  <div class="login-card">
+    <form id="login-form" novalidate>
+      <h2>Login</h2>
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username">
+        <span class="error" id="username-error">Username is required.</span>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password">
+        <span class="error" id="password-error">Password must be at least 6 characters.</span>
+      </div>
+      <button type="submit">Login</button>
+    </form>
+  </div>
 
   <script>
     document.getElementById('login-form').addEventListener('submit', function (e) {
       var valid = true;
 
-      var username = document.getElementById('username').value.trim();
+      var usernameInput = document.getElementById('username');
       var usernameError = document.getElementById('username-error');
-      if (!username) {
+      if (!usernameInput.value.trim()) {
         usernameError.classList.add('visible');
+        usernameInput.classList.add('invalid');
         valid = false;
       } else {
         usernameError.classList.remove('visible');
+        usernameInput.classList.remove('invalid');
       }
 
-      var password = document.getElementById('password').value;
+      var passwordInput = document.getElementById('password');
       var passwordError = document.getElementById('password-error');
-      if (password.length < 6) {
+      if (passwordInput.value.length < 6) {
         passwordError.classList.add('visible');
+        passwordInput.classList.add('invalid');
         valid = false;
       } else {
         passwordError.classList.remove('visible');
+        passwordInput.classList.remove('invalid');
       }
 
       if (!valid) {
