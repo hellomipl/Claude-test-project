@@ -43,13 +43,82 @@ jobs:
             Read CLAUDE.md and repository context.
 
             Task:
-            1. Re-analyze the bug using the issue and the new tester comment.
-            2. Understand why the previous fix may have failed.
+            1. Re-analyze the bug using the original issue and the new tester comment.
+            2. Identify why the previous fix may have failed.
             3. Implement the smallest safe follow-up fix.
             4. Update tests if needed.
-            5. Create a new pull request.
-            6. Do not merge the PR.
-            7. Keep the change focused only on this bug.
+            5. Create a pull request.
+            6. In the PR body, include this exact line:
+               Issue: #${{ github.event.issue.number }}
+            7. Do not use Fixes/Closes keywords.
+            8. Do not merge the PR.
           claude_args: >-
             --max-turns 20
             --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh pr *),Bash(gh issue *),Bash(npm:*),Bash(node:*)
+
+      - name: Move issue card to Pending approval
+        uses: actions/github-script@v8
+        env:
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
+          PENDING_APPROVAL_OPTION_ID: ${{ vars.PENDING_APPROVAL_OPTION_ID }}
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.issue.number;
+
+            const projectId = process.env.PROJECT_ID;
+            const statusFieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.PENDING_APPROVAL_OPTION_ID;
+
+            const result = await github.graphql(`
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  issue(number:$number) {
+                    projectItems(first: 20) {
+                      nodes {
+                        id
+                        project {
+                          id
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `, {
+              owner,
+              repo,
+              number: issueNumber
+            });
+
+            const item = result.repository.issue.projectItems.nodes.find(
+              n => n.project.id === projectId
+            );
+
+            if (!item) {
+              core.setFailed("Issue is not in the target project.");
+              return;
+            }
+
+            await github.graphql(`
+              mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item {
+                    id
+                  }
+                }
+              }
+            `, {
+              projectId,
+              itemId: item.id,
+              fieldId: statusFieldId,
+              optionId
+            });
