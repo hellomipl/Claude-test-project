@@ -4,19 +4,53 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login</title>
+  <style>
+    .error { color: red; font-size: 0.85em; display: none; }
+    .error.visible { display: block; }
+  </style>
 </head>
 <body>
-  <form id="login-form">
+  <form id="login-form" novalidate>
     <h2>Login</h2>
     <div>
       <label for="username">Username</label>
-      <input type="text" id="username" name="username" required>
+      <input type="text" id="username" name="username">
+      <span class="error" id="username-error">Username is required.</span>
     </div>
     <div>
       <label for="password">Password</label>
-      <input type="password" id="password" name="password" required>
+      <input type="password" id="password" name="password">
+      <span class="error" id="password-error">Password must be at least 6 characters.</span>
     </div>
     <button type="submit">Login</button>
   </form>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', function (e) {
+      var valid = true;
+
+      var username = document.getElementById('username').value.trim();
+      var usernameError = document.getElementById('username-error');
+      if (!username) {
+        usernameError.classList.add('visible');
+        valid = false;
+      } else {
+        usernameError.classList.remove('visible');
+      }
+
+      var password = document.getElementById('password').value;
+      var passwordError = document.getElementById('password-error');
+      if (password.length < 6) {
+        passwordError.classList.add('visible');
+        valid = false;
+      } else {
+        passwordError.classList.remove('visible');
+      }
+
+      if (!valid) {
+        e.preventDefault();
+      }
+    });
+  </script>
 </body>
 </html>
