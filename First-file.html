@@ -99,6 +99,19 @@
     button[type="submit"]:hover {
       background: #357abd;
     }
+
+    .forgot-password {
+      display: block;
+      margin-top: 0.75rem;
+      text-align: center;
+      font-size: 0.875rem;
+      color: #4a90e2;
+      text-decoration: none;
+    }
+
+    .forgot-password:hover {
+      text-decoration: underline;
+    }
   </style>
 </head>
 <body>
@@ -116,6 +129,7 @@
         <span class="error" id="password-error">Password must be at least 6 characters.</span>
       </div>
       <button type="submit">Login</button>
+      <a href="/forgot-password" class="forgot-password">Forgot password?</a>
     </form>
   </div>
 
