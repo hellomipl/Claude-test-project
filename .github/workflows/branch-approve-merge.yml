@@ -1,0 +1,160 @@
+name: Branch Approve and Merge
+
+on:
+  issues:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  merge:
+    if: github.event.issue.pull_request == null && github.event.label.name == 'branch-approved'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Find and merge issue branch
+        id: merge
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const issueNumber = context.issue.number;
+            const prefix = `fix/${issueNumber}-`;
+
+            const { data: branches } = await github.rest.repos.listBranches({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+
+            const issueBranch = branches.find(b => b.name.startsWith(prefix));
+
+            if (!issueBranch) {
+              core.setFailed(`No branch found matching prefix: ${prefix}`);
+              return;
+            }
+
+            const branchName = issueBranch.name;
+            core.setOutput('branch_name', branchName);
+            console.log(`Found branch: ${branchName}`);
+
+            // Merge the branch to main
+            try {
+              await github.rest.repos.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: 'main',
+                head: branchName,
+                commit_message: `Merge ${branchName} into main (Issue #${issueNumber})`
+              });
+              console.log(`Merged ${branchName} into main`);
+            } catch (error) {
+              core.setFailed(`Merge failed: ${error.message}`);
+              return;
+            }
+
+            // Delete the branch
+            try {
+              await github.rest.git.deleteRef({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                ref: `heads/${branchName}`
+              });
+              console.log(`Deleted branch: ${branchName}`);
+            } catch (error) {
+              console.log(`Warning: Could not delete branch: ${error.message}`);
+            }
+
+      - name: Remove branch-approved label
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            try {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: 'branch-approved'
+              });
+            } catch (error) {
+              console.log(`Warning: Could not remove label: ${error.message}`);
+            }
+
+      - name: Move issue card to Ready for testing
+        uses: actions/github-script@v8
+        env:
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
+          READY_FOR_TESTING_OPTION_ID: ${{ vars.READY_FOR_TESTING_OPTION_ID }}
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.issue.number;
+
+            const projectId = process.env.PROJECT_ID;
+            const statusFieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.READY_FOR_TESTING_OPTION_ID;
+
+            const result = await github.graphql(`
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  issue(number:$number) {
+                    projectItems(first: 20) {
+                      nodes {
+                        id
+                        project { id }
+                      }
+                    }
+                  }
+                }
+              }
+            `, { owner, repo, number: issueNumber });
+
+            const item = result.repository.issue.projectItems.nodes.find(
+              n => n.project.id === projectId
+            );
+
+            if (!item) {
+              core.setFailed("Issue is not in the target project.");
+              return;
+            }
+
+            await github.graphql(`
+              mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item { id }
+                }
+              }
+            `, {
+              projectId,
+              itemId: item.id,
+              fieldId: statusFieldId,
+              optionId
+            });
+
+      - name: Comment on issue
+        uses: actions/github-script@v8
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `Branch \`${{ steps.merge.outputs.branch_name }}\` has been merged to main and deleted. Issue moved to **Ready for testing**.`
+            });
