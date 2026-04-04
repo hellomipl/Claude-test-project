@@ -1,0 +1,55 @@
+name: Claude Refix
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+
+jobs:
+  refix:
+    if: >
+      github.event.issue.pull_request == null &&
+      contains(github.event.comment.body, '/refix')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Claude refix
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+          prompt: |
+            A tester requested a refix for an existing bug.
+
+            Repository: ${{ github.repository }}
+            Issue #${{ github.event.issue.number }}
+            Title: ${{ github.event.issue.title }}
+
+            Original issue body:
+            ${{ github.event.issue.body }}
+
+            Refix comment:
+            ${{ github.event.comment.body }}
+
+            Read CLAUDE.md and repository context.
+
+            Task:
+            1. Re-analyze the bug using the issue and the new tester comment.
+            2. Understand why the previous fix may have failed.
+            3. Implement the smallest safe follow-up fix.
+            4. Update tests if needed.
+            5. Create a new pull request.
+            6. Do not merge the PR.
+            7. Keep the change focused only on this bug.
+          claude_args: >-
+            --max-turns 20
+            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh pr *),Bash(gh issue *),Bash(npm:*),Bash(node:*)
