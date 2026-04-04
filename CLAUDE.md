@@ -30,8 +30,7 @@
 
 ## GitHub Project board statuses
 - `To triage` — issue created, Claude is analyzing
-- `In progress` — Claude is fixing the bug on the branch
-- `Review` — fix committed, developer reviews the branch
+- `Review` (was Pending approval) — fix committed, developer reviews the branch
 - `Ready for testing` — branch merged to main, QA pending
 - `Done` — tester verified fix works
 
@@ -44,7 +43,6 @@
 - `PROJECT_ID`
 - `STATUS_FIELD_ID`
 - `TO_TRIAGE_OPTION_ID`
-- `IN_PROGRESS_OPTION_ID`
-- `REVIEW_OPTION_ID`
+- `PENDING_APPROVAL_OPTION_ID` (used for Review status)
 - `READY_FOR_TESTING_OPTION_ID`
 - `DONE_OPTION_ID`
