@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  pull-requests: write
   issues: write
   id-token: write
 
@@ -22,46 +21,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Claude refix
-        uses: anthropics/claude-code-action@v1
+      - name: Generate refix branch name
+        id: branch
+        uses: actions/github-script@v8
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          show_full_output: true
-          prompt: |
-            A tester requested a refix for an existing bug.
+          result-encoding: string
+          script: |
+            const number = context.issue.number;
+            const title = context.payload.issue.title;
+            const slug = title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .replace(/\s+/g, '-')
+              .replace(/-+/g, '-')
+              .replace(/^-|-$/g, '')
+              .substring(0, 50);
+            const timestamp = Date.now();
+            return `fix/${number}-${slug}-refix-${timestamp}`;
 
-            Repository: ${{ github.repository }}
-            Issue #${{ github.event.issue.number }}
-            Title: ${{ github.event.issue.title }}
+      - name: Create and push branch
+        run: |
+          git checkout -b ${{ steps.branch.outputs.result }}
+          git push origin ${{ steps.branch.outputs.result }}
 
-            Original issue body:
-            ${{ github.event.issue.body }}
-
-            Refix comment:
-            ${{ github.event.comment.body }}
-
-            Read CLAUDE.md and repository context.
-
-            Task:
-            1. Re-analyze the bug using the original issue and the new tester comment.
-            2. Identify why the previous fix may have failed.
-            3. Implement the smallest safe follow-up fix.
-            4. Update tests if needed.
-            5. Create a pull request.
-            6. In the PR body, include this exact line:
-               Issue: #${{ github.event.issue.number }}
-            7. Do not use Fixes/Closes keywords.
-            8. Do not merge the PR.
-          claude_args: >-
-            --max-turns 20
-            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh pr *),Bash(gh issue *),Bash(npm:*),Bash(node:*)
-
-      - name: Move issue card to Pending approval
+      - name: Move issue card to In progress
         uses: actions/github-script@v8
         env:
           PROJECT_ID: ${{ vars.PROJECT_ID }}
           STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
-          PENDING_APPROVAL_OPTION_ID: ${{ vars.PENDING_APPROVAL_OPTION_ID }}
+          IN_PROGRESS_OPTION_ID: ${{ vars.IN_PROGRESS_OPTION_ID }}
         with:
           github-token: ${{ secrets.PROJECT_PAT }}
           script: |
@@ -71,7 +59,7 @@ jobs:
 
             const projectId = process.env.PROJECT_ID;
             const statusFieldId = process.env.STATUS_FIELD_ID;
-            const optionId = process.env.PENDING_APPROVAL_OPTION_ID;
+            const optionId = process.env.IN_PROGRESS_OPTION_ID;
 
             const result = await github.graphql(`
               query($owner:String!, $repo:String!, $number:Int!) {
@@ -80,19 +68,13 @@ jobs:
                     projectItems(first: 20) {
                       nodes {
                         id
-                        project {
-                          id
-                        }
+                        project { id }
                       }
                     }
                   }
                 }
               }
-            `, {
-              owner,
-              repo,
-              number: issueNumber
-            });
+            `, { owner, repo, number: issueNumber });
 
             const item = result.repository.issue.projectItems.nodes.find(
               n => n.project.id === projectId
@@ -111,9 +93,101 @@ jobs:
                   fieldId: $fieldId,
                   value: { singleSelectOptionId: $optionId }
                 }) {
-                  projectV2Item {
-                    id
+                  projectV2Item { id }
+                }
+              }
+            `, {
+              projectId,
+              itemId: item.id,
+              fieldId: statusFieldId,
+              optionId
+            });
+
+      - name: Claude refix
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+          prompt: |
+            A tester requested a refix for an existing bug.
+
+            Repository: ${{ github.repository }}
+            Issue #${{ github.event.issue.number }}
+            Title: ${{ github.event.issue.title }}
+            Branch: ${{ steps.branch.outputs.result }}
+
+            Original issue body:
+            ${{ github.event.issue.body }}
+
+            Refix comment:
+            ${{ github.event.comment.body }}
+
+            Read CLAUDE.md and repository context.
+
+            Task:
+            1. Checkout the branch: git checkout ${{ steps.branch.outputs.result }}
+            2. Re-analyze the bug using the original issue and the new tester comment.
+            3. Identify why the previous fix may have failed.
+            4. Implement the smallest safe follow-up fix.
+            5. Update or add tests if needed.
+            6. Commit all changes directly to the branch and push.
+            7. Do NOT create a pull request.
+            8. Do NOT merge anything to main.
+            9. Keep changes minimal and focused only on this bug.
+          claude_args: >-
+            --max-turns 20
+            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh issue *),Bash(npm:*),Bash(node:*)
+
+      - name: Move issue card to Review
+        uses: actions/github-script@v8
+        env:
+          PROJECT_ID: ${{ vars.PROJECT_ID }}
+          STATUS_FIELD_ID: ${{ vars.STATUS_FIELD_ID }}
+          REVIEW_OPTION_ID: ${{ vars.REVIEW_OPTION_ID }}
+        with:
+          github-token: ${{ secrets.PROJECT_PAT }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const issueNumber = context.issue.number;
+
+            const projectId = process.env.PROJECT_ID;
+            const statusFieldId = process.env.STATUS_FIELD_ID;
+            const optionId = process.env.REVIEW_OPTION_ID;
+
+            const result = await github.graphql(`
+              query($owner:String!, $repo:String!, $number:Int!) {
+                repository(owner:$owner, name:$repo) {
+                  issue(number:$number) {
+                    projectItems(first: 20) {
+                      nodes {
+                        id
+                        project { id }
+                      }
+                    }
                   }
+                }
+              }
+            `, { owner, repo, number: issueNumber });
+
+            const item = result.repository.issue.projectItems.nodes.find(
+              n => n.project.id === projectId
+            );
+
+            if (!item) {
+              core.setFailed("Issue is not in the target project.");
+              return;
+            }
+
+            await github.graphql(`
+              mutation($projectId:ID!, $itemId:ID!, $fieldId:ID!, $optionId:String!) {
+                updateProjectV2ItemFieldValue(input: {
+                  projectId: $projectId,
+                  itemId: $itemId,
+                  fieldId: $fieldId,
+                  value: { singleSelectOptionId: $optionId }
+                }) {
+                  projectV2Item { id }
                 }
               }
             `, {
