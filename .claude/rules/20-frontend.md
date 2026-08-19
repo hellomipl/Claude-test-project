@@ -12,3 +12,6 @@ Skip this file when the issue does not touch UI code.
 - Keep API models typed and handle nullable/optional fields explicitly.
 - When a page links to another page, confirm the target actually exists before shipping the link.
 - Add or update component tests and affected end-to-end coverage where a harness exists.
+- Any **new** HTML page added at the repository root must be registered in
+  `docs/memory/module-map.md` in the same commit, as a row in the module table. An unregistered
+  page is invisible to every future agent run.
