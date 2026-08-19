@@ -1,9 +1,9 @@
 # Issue 17 — Form validation errors are not announced to screen readers
 
 - GitHub issue: #17
-- Status: In progress
+- Status: Ready for review
 - Branch: `fix/17-form-validation-errors-are-not-announced-to-screen`
-- Last updated: 2026-08-19 00:00 UTC
+- Last updated: 2026-08-19 00:10 UTC
 
 ## Objective
 
@@ -29,11 +29,11 @@ success message) are programmatically associated with their fields and announced
 
 ## Acceptance criteria
 
-- [ ] `#username-error` and `#password-error` are tied to their inputs via `aria-describedby` and
+- [x] `#username-error` and `#password-error` are tied to their inputs via `aria-describedby` and
       announced via a live region when they become visible.
-- [ ] `#email-error` in `forgot-password.html` has the same treatment.
-- [ ] `aria-invalid` toggles true/false on each input alongside the existing `.invalid` class logic.
-- [ ] `#success-message` in `forgot-password.html` is announced via a live region when it appears.
+- [x] `#email-error` in `forgot-password.html` has the same treatment.
+- [x] `aria-invalid` toggles true/false on each input alongside the existing `.invalid` class logic.
+- [x] `#success-message` in `forgot-password.html` is announced via a live region when it appears.
 
 ## Assumptions
 
@@ -63,12 +63,12 @@ success message) are programmatically associated with their fields and announced
 
 ## Implementation checklist
 
-- [ ] Inspect existing code before editing
-- [ ] Implement the smallest safe fix
-- [ ] Add or update tests where a harness exists — none exists (KP-0001)
-- [ ] Evaluate durable-memory impact
-- [ ] Update the handoff
-- [ ] Commit and push to the issue branch
+- [x] Inspect existing code before editing
+- [x] Implement the smallest safe fix
+- [x] Add or update tests where a harness exists — none exists (KP-0001), so N/A
+- [x] Evaluate durable-memory impact
+- [x] Update the handoff
+- [x] Commit and push to the issue branch
 
 ## Affected files
 
@@ -84,21 +84,36 @@ success message) are programmatically associated with their fields and announced
 
 ## Decisions made
 
-- Plan: use `role="alert"` on error spans and `role="status"` on the success banner (implicit live
-  regions) rather than explicit `aria-live` attributes — simpler and standard-conformant.
-- Plan: set `aria-invalid="false"` as the static default on inputs and flip it to `"true"`/`"false"`
-  via `setAttribute` in the existing submit handlers, alongside the existing class toggles.
+- Used `role="alert"` on error spans and `role="status"` on the success banner (implicit live
+  regions) rather than explicit `aria-live` attributes — simpler and standard-conformant, no extra
+  attribute needed.
+- Set `aria-invalid="false"` as the static default on inputs in the markup, and flip it to
+  `"true"`/`"false"` via `setAttribute` in the existing submit handlers, right alongside each
+  existing `classList.add('invalid')`/`classList.remove('invalid')` call — keeps the two indicators
+  (visual class, ARIA state) always in sync in one place.
+- Kept `aria-describedby` static in the markup rather than adding/removing it via JS. The error
+  span always exists at the same ID; only its visibility toggles. Screen readers only announce the
+  referenced text once it's exposed (not `display:none`), so a static association is simpler and
+  has the same effective behavior as toggling the attribute.
 
 ## Validation results
 
 | Command or check | Result | Evidence |
 |---|---|---|
 | `npm test` / `npm run lint` / `npm run build` | Not run | No `package.json` exists (KP-0001) |
+| Manual read-through of both HTML files, full file, post-edit | Done | Confirmed each `aria-describedby` value matches its error span's `id`; `role="alert"`/`role="status"` are valid ARIA roles; JS `setAttribute('aria-invalid', ...)` calls added in both the invalid and valid branches of every validation check, mirroring the existing class-toggle branches exactly |
+| HTML tag-balance / structural check via a local script | Not run | `python3` and other non-`git` Bash commands were denied by the session's tool-approval gate (see Blockers) — could not execute even a read-only local script |
+| Actual screen reader test (NVDA/VoiceOver/Narrator) | Not run | No AT or browser available in this sandbox; cannot claim this was verified end-to-end. This is the one thing the issue itself asks a fixer to do ("turn on a screen reader") and it was not possible here. |
 
 ## Durable memory impact
 
-- Candidates: TBD after implementation.
+- Candidates: none. This is a one-off page-level fix with no new reusable pattern, invariant, or
+  confirmed recurring problem beyond what's already captured in `known-problems.md`. The `gh`/
+  non-git Bash approval blocker encountered in this run is noted in the handoff as a blocker for
+  this run, but was not independently confirmed as a stable, reproducible constraint of the
+  environment (only observed once, in one session), so it does not meet the "verified reusable"
+  bar for promotion to `docs/memory/known-problems.md`.
 
 ## Next executable action
 
-Implement the ARIA attribute changes in `First-file.html` and `forgot-password.html`.
+None — fix implemented, task complete pending human review of the branch.
