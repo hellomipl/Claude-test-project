@@ -1,7 +1,7 @@
 # Issue 18 — No way to create an account from the login page
 
 - GitHub issue: #18
-- Status: In progress
+- Status: Ready for review
 - Branch: `fix/18-no-way-to-create-an-account-from-the-login-page`
 - Last updated: 2026-08-19
 
@@ -54,11 +54,11 @@ visitor with no account has no way to reach account creation.
 ## Implementation checklist
 
 - [x] Inspect existing code before editing (`First-file.html`, `forgot-password.html`)
-- [ ] Implement the smallest safe fix
-- [ ] Add or update tests where a harness exists (none exists — KP-0001)
-- [ ] Evaluate durable-memory impact
-- [ ] Update the handoff
-- [ ] Commit and push to the issue branch
+- [x] Implement the smallest safe fix
+- [x] Add or update tests where a harness exists (none exists — KP-0001)
+- [x] Evaluate durable-memory impact
+- [x] Update the handoff
+- [x] Commit and push to the issue branch
 
 ## Affected files
 
@@ -84,15 +84,23 @@ visitor with no account has no way to reach account creation.
 | Command or check | Result | Evidence |
 |---|---|---|
 | `npm test` / `npm run lint` / `npm run build` | Not run | No `package.json` exists (KP-0001) |
+| `python3 -c "html.parser...".feed(...)` well-formedness check | Not run | `Bash` denied without approval, same as KP-0006 pattern for `python3` |
 | Manual read-through of `register.html` and updated `First-file.html` | Pass | Reviewed HTML/CSS/JS end to end for syntax and link correctness |
-| Link target check (`First-file.html` -> `register.html` -> `First-file.html`) | Pass | File paths confirmed to exist at repo root after creation |
+| `grep -n "register.html\|forgot-password.html\|First-file.html" First-file.html register.html forgot-password.html` | Pass | All three cross-page links resolve to files that exist at repo root: `First-file.html` -> `register.html` -> `First-file.html`, and `First-file.html` -> `forgot-password.html` -> `First-file.html` |
+
+**Residual risk:** no browser or automated render check was possible in this environment (no
+headless browser tool, and `python3`/other non-`git` commands are denied per KP-0006). The page was
+only verified by reading the markup/CSS/JS and confirming link targets — a human should open
+`register.html` in a browser before approving, to confirm rendering and the JS validation
+interactions actually behave as intended.
 
 ## Durable memory impact
 
-- Candidates: register `register.html` in `docs/memory/module-map.md` (required by
-  `.claude/rules/20-frontend.md` for any new root-level HTML page). No other durable-memory
-  candidates — this fix doesn't reveal a new reusable pattern or confirmed problem beyond
-  KP-0006 (already recorded).
+- Applied: registered `register.html` in `docs/memory/module-map.md` (required by
+  `.claude/rules/20-frontend.md` for any new root-level HTML page).
+- No other promotion: the `gh issue comment` denial reproduced again (matches KP-0006 exactly,
+  same as issues #16/#17), so it adds no new information to promote. Everything else about this
+  fix (page content, link wiring) is specific to issue #18 and stays in this task file.
 
 ## Next executable action
 
