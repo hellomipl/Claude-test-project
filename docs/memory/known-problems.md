@@ -144,3 +144,53 @@ apparent inconsistency by renaming the variable or the column, which would break
 
 Pick one: rename the board column to `Review`, or correct the line in `CLAUDE.md`. Then delete
 this entry.
+
+---
+
+### KP-0006 — The agent cannot post its triage comment; `gh issue comment` is refused
+
+- Status: **Open**
+- First confirmed: 2026-08-19 (issue #16), still reproducing on issue #17
+- Affected modules: `.github/workflows/claude-bug-fix.yml`, `.github/workflows/claude-refix.yml`
+
+**Observed behavior**
+
+Step 2 of both workflow prompts tells the agent to post its triage analysis as an issue comment.
+It composes the comment and calls `gh issue comment <n> --repo … --body "$(cat <<'EOF' … EOF)"`.
+Every attempt returns `This command requires approval`. The run then continues and finishes
+**green**, so the missing comment is invisible unless you check the issue.
+
+Issues #16 and #17 both have zero comments.
+
+**Confirmed evidence** (run 32227877961, 20 denials total)
+
+| Command | Pattern intended to cover it | Result |
+|---|---|---|
+| `git commit -m "$(cat <<'EOF' …)"` | `Bash(git:*)` | allowed |
+| `gh issue comment 17 --body "$(cat …)"` | `Bash(gh issue:*)` | denied ×8 |
+| `gh auth status` | none | denied ×4 (expected) |
+| `python3 /tmp/check_html.py` | none | denied ×8 (expected) |
+
+**What has been ruled out**
+
+- *Not* the space-vs-colon separator. `Bash(gh issue *)` was changed to `Bash(gh issue:*)` in
+  commit `7301dd1` and the denial is unchanged. An earlier entry in `coding-patterns.md` claimed
+  the separator was the proven cause; that claim was wrong and has been corrected.
+- *Not* command substitution. The allowed `git commit` above contains `$(cat <<'EOF' …)`.
+
+**Leading hypothesis, not yet isolated**
+
+Only the *single-word* prefix matched. `Bash(git:*)` worked; the two-word `Bash(gh issue:*)` did
+not. Predicted fix: `Bash(gh:*)`. Untested — and it widens access to every `gh` subcommand, so
+weigh that before adopting it.
+
+**Second, independent candidate cause**
+
+The Claude step passes no `GH_TOKEN`/`GITHUB_TOKEN` in an `env:` block, so `gh` may be
+unauthenticated in the runner regardless of permissions. If so, fixing the pattern alone will
+surface an auth error instead of a comment. Both need checking together.
+
+**Current mitigation**
+
+None. Treat the triage comment as not happening. The task file and handoff on the issue branch
+carry the same analysis and are committed, so no information is actually lost.
