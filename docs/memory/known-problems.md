@@ -113,11 +113,54 @@ now supplied as Actions variables.
 
 ---
 
-### KP-0005 — `gh` CLI commands are blocked by the approval gate in an unattended run
+### KP-0005 — Board column names in the docs do not match the live board
 
 - Status: Open
+- First confirmed: 2026-08-19
+- Affected modules: `CLAUDE.md`, `docs/context.md`, all three workflows
+
+**Observed behavior**
+
+`CLAUDE.md` lists the second board status as "`Review` (was Pending approval)", implying the column
+was renamed. It was not. The live board's Status field offers exactly four options:
+`To triage`, `Pending approval`, `Ready for testing`, `Done`.
+
+**Confirmed evidence**
+
+GraphQL query against user project 5 on 2026-08-19 returned the option set above, with
+`Pending approval` = `f75ad846` — the value supplied as `PENDING_APPROVAL_OPTION_ID`.
+
+**Why it is harmless today**
+
+The workflows address the column by option **ID**, never by name, so the status moves work
+regardless of the label mismatch.
+
+**Why it still matters**
+
+Anyone reading `CLAUDE.md` will look for a `Review` column that does not exist, and may "fix" the
+apparent inconsistency by renaming the variable or the column, which would break all three workflows.
+
+**Correct long-term direction**
+
+Pick one: rename the board column to `Review`, or correct the line in `CLAUDE.md`. Then delete
+this entry.
+
+---
+
+### KP-0006 — `gh` CLI commands are blocked by the approval gate in an unattended run
+
+- Status: **Resolved** 2026-08-19
 - First confirmed: 2026-08-19 (issue #16)
 - Affected modules: any agent step that shells out to `gh` (e.g. posting a triage comment)
+
+**Resolution**
+
+The root cause was the permission pattern, not a missing settings file. Both workflows granted
+`Bash(gh issue *)` — the space form, which never matches. Corrected to `Bash(gh issue:*)` in
+commit `7301dd1`. The rule is recorded in `docs/memory/coding-patterns.md`.
+
+Note the original diagnosis below reached for the wrong fix (adding a settings allow-rule). The
+observed behavior it recorded was accurate and is what made the real cause findable.
 
 **Observed behavior**
 

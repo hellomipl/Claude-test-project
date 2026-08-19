@@ -31,6 +31,31 @@ A workflow needs to change a GitHub Projects v2 card status.
 
 ---
 
+### Pattern: Bash tool permission globs use a colon, not a space
+
+- Applies to: `--allowedTools` in `.github/workflows/*.yml`, and `allowed-tools` in skill frontmatter
+- Reference implementation: `.github/workflows/claude-bug-fix.yml`
+- Verified: 2026-08-19, empirically, during issue #16
+
+**Use when**
+
+Granting an agent permission to run a specific command family in an unattended run.
+
+**Implementation rules**
+
+- Write the pattern as `Bash(<command>:*)`. The separator before the wildcard is a **colon**.
+- A multi-word prefix takes the colon at the end: `Bash(gh issue:*)`.
+- In an unattended run nobody can answer an approval prompt, so a non-matching pattern does not
+  merely warn — the command is refused and that part of the task silently does not happen.
+
+**Avoid**
+
+- The space form `Bash(gh issue *)`. Proven during issue #16: in one run, with one permission list,
+  `Bash(git:*)` matched and every git commit succeeded, while `Bash(gh issue *)` did not match and
+  the triage comment was never posted. Only the separator differed.
+
+---
+
 ### Pattern: Prevent native submission unconditionally in a form's submit handler
 
 - Applies to: standalone HTML pages at the repository root (`*.html`) with a JS `submit` listener
