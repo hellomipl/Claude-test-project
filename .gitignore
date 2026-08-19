@@ -134,3 +134,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Nested repository: the auth API lives in this folder for editing convenience
+# but is tracked by its own repo at github.com/hellomipl/claude-test-api.
+# Ignored here so the parent does not treat it as untracked clutter.
+claude-test-api/
