@@ -40,6 +40,12 @@ jobs:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           show_full_output: true
 
+          # The job-level `actions: read` permission alone is NOT enough to expose
+          # the github_ci MCP tools. This input is also required - confirmed by run
+          # 32252038288, where the job permission was set and the tools were absent.
+          additional_permissions: |
+            actions: read
+
           plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
           plugins: "code-review@claude-code-plugins"
 
