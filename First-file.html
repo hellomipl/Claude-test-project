@@ -120,13 +120,13 @@
       <h2>Login</h2>
       <div class="field">
         <label for="username">Username</label>
-        <input type="text" id="username" name="username">
-        <span class="error" id="username-error">Username is required.</span>
+        <input type="text" id="username" name="username" aria-describedby="username-error" aria-invalid="false">
+        <span class="error" id="username-error" role="alert">Username is required.</span>
       </div>
       <div class="field">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password">
-        <span class="error" id="password-error">Password must be at least 6 characters.</span>
+        <input type="password" id="password" name="password" aria-describedby="password-error" aria-invalid="false">
+        <span class="error" id="password-error" role="alert">Password must be at least 6 characters.</span>
       </div>
       <button type="submit">Login</button>
       <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
@@ -142,9 +142,11 @@
       if (!usernameInput.value.trim()) {
         usernameError.classList.add('visible');
         usernameInput.classList.add('invalid');
+        usernameInput.setAttribute('aria-invalid', 'true');
       } else {
         usernameError.classList.remove('visible');
         usernameInput.classList.remove('invalid');
+        usernameInput.setAttribute('aria-invalid', 'false');
       }
 
       var passwordInput = document.getElementById('password');
@@ -152,9 +154,11 @@
       if (passwordInput.value.length < 6) {
         passwordError.classList.add('visible');
         passwordInput.classList.add('invalid');
+        passwordInput.setAttribute('aria-invalid', 'true');
       } else {
         passwordError.classList.remove('visible');
         passwordInput.classList.remove('invalid');
+        passwordInput.setAttribute('aria-invalid', 'false');
       }
     });
   </script>
