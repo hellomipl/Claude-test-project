@@ -7,7 +7,7 @@ Current verified state as of 2026-08-19.
 | Bug automation | Issue opened -> branch -> Claude fix -> board status | `.github/workflows/claude-bug-fix.yml` | `CLAUDE_CODE_OAUTH_TOKEN`, `PROJECT_PAT`, project vars |
 | Refix loop | `/refix` comment -> new branch -> follow-up fix | `.github/workflows/claude-refix.yml` | same as above |
 | Merge gate | `branch-approved` label -> merge, delete branch, board move | `.github/workflows/branch-approve-merge.yml` | `PROJECT_PAT`, `READY_FOR_TESTING_OPTION_ID` |
-| Static pages | Login and forgot-password screens | `First-file.html`, `forgot-password.html` | none (no build step) |
+| Static pages | Login, forgot-password and registration screens | `First-file.html`, `forgot-password.html`, `register.html` | none (no build step) |
 | Agent instructions | Always-on rules and memory policy | `CLAUDE.md`, `.claude/rules/` | — |
 
 ## Not yet present
