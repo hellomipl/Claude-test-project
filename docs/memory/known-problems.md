@@ -147,40 +147,50 @@ this entry.
 
 ---
 
-### KP-0006 — `gh` CLI commands are blocked by the approval gate in an unattended run
+### KP-0006 — The agent cannot post its triage comment; `gh issue comment` is refused
 
-- Status: **Resolved** 2026-08-19
-- First confirmed: 2026-08-19 (issue #16)
-- Affected modules: any agent step that shells out to `gh` (e.g. posting a triage comment)
-
-**Resolution**
-
-The root cause was the permission pattern, not a missing settings file. Both workflows granted
-`Bash(gh issue *)` — the space form, which never matches. Corrected to `Bash(gh issue:*)` in
-commit `7301dd1`. The rule is recorded in `docs/memory/coding-patterns.md`.
-
-Note the original diagnosis below reached for the wrong fix (adding a settings allow-rule). The
-observed behavior it recorded was accurate and is what made the real cause findable.
+- Status: **Open**
+- First confirmed: 2026-08-19 (issue #16), still reproducing on issue #17
+- Affected modules: `.github/workflows/claude-bug-fix.yml`, `.github/workflows/claude-refix.yml`
 
 **Observed behavior**
 
-`gh auth status` and `gh issue comment` both returned `This command requires approval` with no
-prompt able to reach a human, even with `dangerouslyDisableSandbox` set. No `.claude/settings.json`
-or `.claude/settings.local.json` exists to pre-allow these commands. As a result, the agent could not
-post the triage comment described in the bug-fix workflow.
+Step 2 of both workflow prompts tells the agent to post its triage analysis as an issue comment.
+It composes the comment and calls `gh issue comment <n> --repo … --body "$(cat <<'EOF' … EOF)"`.
+Every attempt returns `This command requires approval`. The run then continues and finishes
+**green**, so the missing comment is invisible unless you check the issue.
 
-**Confirmed evidence**
+Issues #16 and #17 both have zero comments.
 
-Direct tool output during issue #16: repeated `gh auth status` and `gh issue comment` calls both
-returned the approval-required error; a plain `echo` in the same session succeeded immediately.
+**Confirmed evidence** (run 32227877961, 20 denials total)
+
+| Command | Pattern intended to cover it | Result |
+|---|---|---|
+| `git commit -m "$(cat <<'EOF' …)"` | `Bash(git:*)` | allowed |
+| `gh issue comment 17 --body "$(cat …)"` | `Bash(gh issue:*)` | denied ×8 |
+| `gh auth status` | none | denied ×4 (expected) |
+| `python3 /tmp/check_html.py` | none | denied ×8 (expected) |
+
+**What has been ruled out**
+
+- *Not* the space-vs-colon separator. `Bash(gh issue *)` was changed to `Bash(gh issue:*)` in
+  commit `7301dd1` and the denial is unchanged. An earlier entry in `coding-patterns.md` claimed
+  the separator was the proven cause; that claim was wrong and has been corrected.
+- *Not* command substitution. The allowed `git commit` above contains `$(cat <<'EOF' …)`.
+
+**Leading hypothesis, not yet isolated**
+
+Only the *single-word* prefix matched. `Bash(git:*)` worked; the two-word `Bash(gh issue:*)` did
+not. Predicted fix: `Bash(gh:*)`. Untested — and it widens access to every `gh` subcommand, so
+weigh that before adopting it.
+
+**Second, independent candidate cause**
+
+The Claude step passes no `GH_TOKEN`/`GITHUB_TOKEN` in an `env:` block, so `gh` may be
+unauthenticated in the runner regardless of permissions. If so, fixing the pattern alone will
+surface an auth error instead of a comment. Both need checking together.
 
 **Current mitigation**
 
-Do not block the rest of the run on a failed `gh` call. Record the blocker in the task file and
-handoff, and continue with the branch/commit work, which uses `git` (not `gh`) and is unaffected.
-
-**Correct long-term direction**
-
-Add an explicit allow-rule for the specific `gh` invocations the bug-fix workflow needs (e.g.
-`gh issue comment`) to `.claude/settings.json`, so unattended runs don't stall on an approval prompt
-nobody can answer.
+None. Treat the triage comment as not happening. The task file and handoff on the issue branch
+carry the same analysis and are committed, so no information is actually lost.
