@@ -110,3 +110,34 @@ Treat `CLAUDE.md` and `.github/workflows/` as authoritative. Do not follow `docs
 
 Rewrite or delete `docs/context.md`. It also holds the project and field IDs in plaintext, which are
 now supplied as Actions variables.
+
+---
+
+### KP-0005 — `gh` CLI commands are blocked by the approval gate in an unattended run
+
+- Status: Open
+- First confirmed: 2026-08-19 (issue #16)
+- Affected modules: any agent step that shells out to `gh` (e.g. posting a triage comment)
+
+**Observed behavior**
+
+`gh auth status` and `gh issue comment` both returned `This command requires approval` with no
+prompt able to reach a human, even with `dangerouslyDisableSandbox` set. No `.claude/settings.json`
+or `.claude/settings.local.json` exists to pre-allow these commands. As a result, the agent could not
+post the triage comment described in the bug-fix workflow.
+
+**Confirmed evidence**
+
+Direct tool output during issue #16: repeated `gh auth status` and `gh issue comment` calls both
+returned the approval-required error; a plain `echo` in the same session succeeded immediately.
+
+**Current mitigation**
+
+Do not block the rest of the run on a failed `gh` call. Record the blocker in the task file and
+handoff, and continue with the branch/commit work, which uses `git` (not `gh`) and is unaffected.
+
+**Correct long-term direction**
+
+Add an explicit allow-rule for the specific `gh` invocations the bug-fix workflow needs (e.g.
+`gh issue comment`) to `.claude/settings.json`, so unattended runs don't stall on an approval prompt
+nobody can answer.

@@ -135,6 +135,8 @@
 
   <script>
     document.getElementById('login-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+
       var valid = true;
 
       var usernameInput = document.getElementById('username');

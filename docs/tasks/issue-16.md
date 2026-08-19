@@ -1,9 +1,9 @@
 # Issue 16 — Login form leaks password into the URL on successful submit
 
 - GitHub issue: #16
-- Status: In progress
+- Status: Ready for review
 - Branch: `fix/16-login-form-leaks-password-into-the-url-on-successf`
-- Last updated: 2026-08-19 00:00 UTC
+- Last updated: 2026-08-19 00:30 UTC
 
 ## Objective
 
@@ -26,8 +26,9 @@ headers.
 
 ## Acceptance criteria
 
-- [ ] Submitting the login form with valid username/password does not navigate the page or add
-      `username`/`password` to the URL, in any code path (valid or invalid).
+- [x] Submitting the login form with valid username/password does not navigate the page or add
+      `username`/`password` to the URL, in any code path (valid or invalid). Verified by code
+      read-through (see Validation results); not exercised in a live browser — see handoff.
 
 ## Assumptions
 
@@ -53,11 +54,11 @@ headers.
 ## Implementation checklist
 
 - [x] Inspect existing code before editing
-- [ ] Implement the smallest safe fix
-- [ ] Add or update tests where a harness exists (none exists — see KP-0001)
-- [ ] Evaluate durable-memory impact
-- [ ] Update the handoff
-- [ ] Commit and push to the issue branch
+- [x] Implement the smallest safe fix
+- [x] Add or update tests where a harness exists (none exists — see KP-0001; no test added)
+- [x] Evaluate durable-memory impact
+- [x] Update the handoff
+- [x] Commit and push to the issue branch
 
 ## Affected files
 
@@ -90,10 +91,16 @@ headers.
 
 ## Durable memory impact
 
-- Candidates: none. This is a self-contained, single-file front-end bug fix with no reusable
-  pattern, invariant, or new known-problem beyond what's already documented. See
-  `.claude/skills/update-project-memory/SKILL.md` evaluation in the handoff.
+- Promoted two items (both pass the five-point promotion test in
+  `.claude/skills/update-project-memory/SKILL.md`):
+  1. `docs/memory/known-problems.md` KP-0005 — `gh` CLI commands are blocked by the approval gate
+     in an unattended run, with no `.claude/settings.json` allow-rule to unblock them. Confirmed by
+     direct tool failures this run; reusable for any future run that needs to call `gh`.
+  2. `docs/memory/coding-patterns.md` — "Prevent native submission unconditionally in a form's
+     submit handler." Reusable convention for any future form added to these static HTML pages.
 
 ## Next executable action
 
-Implement the fix in `First-file.html`, then update this file and write the handoff.
+None — fix implemented and verified by code read-through; task and handoff written. A human
+reviewer should exercise the login form in an actual browser before applying `branch-approved`,
+since no browser was available in this session to confirm the fix visually.

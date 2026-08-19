@@ -31,6 +31,33 @@ A workflow needs to change a GitHub Projects v2 card status.
 
 ---
 
+### Pattern: Prevent native submission unconditionally in a form's submit handler
+
+- Applies to: standalone HTML pages at the repository root (`*.html`) with a JS `submit` listener
+- Reference implementation: `forgot-password.html`, `First-file.html` (fixed in issue #16)
+- Verified: 2026-08-19
+
+**Use when**
+
+Adding or editing a `<form>` whose submission is handled entirely in client-side JS (no real
+`action`/`method`, e.g. a static demo page).
+
+**Implementation rules**
+
+- Call `e.preventDefault()` as the *first* statement in the `submit` listener, unconditionally —
+  before any validation runs. Do not gate it behind a validity check.
+- A form with no `action`/`method` defaults to a GET against the current URL on native submit, which
+  serializes every field — including passwords — into the query string, browser history and
+  Referer headers.
+
+**Avoid**
+
+- Calling `e.preventDefault()` only inside an `if (!valid)` branch (or any conditional path); that
+  leaves the successful/valid path free to trigger a native submit. This was the exact bug in
+  issue #16.
+
+---
+
 ## Template
 
 ### Pattern: Short name
