@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login</title>
+  <title>Create Account</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; }
 
@@ -17,7 +17,7 @@
       font-family: Arial, sans-serif;
     }
 
-    .login-card {
+    .card {
       background: #fff;
       border-radius: 8px;
       box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
@@ -26,7 +26,7 @@
       max-width: 380px;
     }
 
-    .login-card h2 {
+    .card h2 {
       margin: 0 0 1.5rem;
       font-size: 1.5rem;
       color: #1a1a2e;
@@ -82,6 +82,22 @@
       font-size: 0.85rem;
     }
 
+    .success {
+      display: none;
+      padding: 0.75rem;
+      background: #f0fff4;
+      border: 1.5px solid #68d391;
+      border-radius: 5px;
+      font-size: 0.875rem;
+      color: #276749;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .success.visible {
+      display: block;
+    }
+
     button[type="submit"] {
       width: 100%;
       padding: 0.7rem;
@@ -100,7 +116,7 @@
       background: #357abd;
     }
 
-    .forgot-password {
+    .back-to-login {
       display: block;
       margin-top: 0.75rem;
       text-align: center;
@@ -109,58 +125,68 @@
       text-decoration: none;
     }
 
-    .forgot-password:hover {
-      text-decoration: underline;
-    }
-
-    .create-account {
-      display: block;
-      margin-top: 0.5rem;
-      text-align: center;
-      font-size: 0.875rem;
-      color: #4a90e2;
-      text-decoration: none;
-    }
-
-    .create-account:hover {
+    .back-to-login:hover {
       text-decoration: underline;
     }
   </style>
 </head>
 <body>
-  <div class="login-card">
-    <form id="login-form" novalidate>
-      <h2>Login</h2>
+  <div class="card">
+    <form id="register-form" novalidate>
+      <h2>Create Account</h2>
+      <div class="success" id="success-message">Account created! You can now log in.</div>
       <div class="field">
         <label for="username">Username</label>
-        <input type="text" id="username" name="username" aria-describedby="username-error" aria-invalid="false">
-        <span class="error" id="username-error" role="alert">Username is required.</span>
+        <input type="text" id="username" name="username">
+        <span class="error" id="username-error">Username is required.</span>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email">
+        <span class="error" id="email-error">Please enter a valid email address.</span>
       </div>
       <div class="field">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" aria-describedby="password-error" aria-invalid="false">
-        <span class="error" id="password-error" role="alert">Password must be at least 6 characters.</span>
+        <input type="password" id="password" name="password">
+        <span class="error" id="password-error">Password must be at least 6 characters.</span>
       </div>
-      <button type="submit">Login</button>
-      <a href="forgot-password.html" class="forgot-password">Forgot password?</a>
-      <a href="register.html" class="create-account">Create an account</a>
+      <div class="field">
+        <label for="confirm-password">Confirm password</label>
+        <input type="password" id="confirm-password" name="confirm-password">
+        <span class="error" id="confirm-password-error">Passwords must match.</span>
+      </div>
+      <button type="submit">Create Account</button>
+      <a href="First-file.html" class="back-to-login">Back to Login</a>
     </form>
   </div>
 
   <script>
-    document.getElementById('login-form').addEventListener('submit', function (e) {
+    document.getElementById('register-form').addEventListener('submit', function (e) {
       e.preventDefault();
+
+      var valid = true;
+      var emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
       var usernameInput = document.getElementById('username');
       var usernameError = document.getElementById('username-error');
       if (!usernameInput.value.trim()) {
         usernameError.classList.add('visible');
         usernameInput.classList.add('invalid');
-        usernameInput.setAttribute('aria-invalid', 'true');
+        valid = false;
       } else {
         usernameError.classList.remove('visible');
         usernameInput.classList.remove('invalid');
-        usernameInput.setAttribute('aria-invalid', 'false');
+      }
+
+      var emailInput = document.getElementById('email');
+      var emailError = document.getElementById('email-error');
+      if (!emailInput.value.trim() || !emailPattern.test(emailInput.value.trim())) {
+        emailError.classList.add('visible');
+        emailInput.classList.add('invalid');
+        valid = false;
+      } else {
+        emailError.classList.remove('visible');
+        emailInput.classList.remove('invalid');
       }
 
       var passwordInput = document.getElementById('password');
@@ -168,11 +194,28 @@
       if (passwordInput.value.length < 6) {
         passwordError.classList.add('visible');
         passwordInput.classList.add('invalid');
-        passwordInput.setAttribute('aria-invalid', 'true');
+        valid = false;
       } else {
         passwordError.classList.remove('visible');
         passwordInput.classList.remove('invalid');
-        passwordInput.setAttribute('aria-invalid', 'false');
+      }
+
+      var confirmInput = document.getElementById('confirm-password');
+      var confirmError = document.getElementById('confirm-password-error');
+      if (confirmInput.value !== passwordInput.value || !confirmInput.value) {
+        confirmError.classList.add('visible');
+        confirmInput.classList.add('invalid');
+        valid = false;
+      } else {
+        confirmError.classList.remove('visible');
+        confirmInput.classList.remove('invalid');
+      }
+
+      var successMessage = document.getElementById('success-message');
+      if (valid) {
+        successMessage.classList.add('visible');
+      } else {
+        successMessage.classList.remove('visible');
       }
     });
   </script>
