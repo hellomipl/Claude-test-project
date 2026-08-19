@@ -1,0 +1,84 @@
+name: MCP and Plugin Smoke Test
+
+# Proves three things actually work on a GitHub-hosted runner, rather than
+# only being documented:
+#   1. a custom MCP server declared via claude_args --mcp-config
+#   2. a built-in MCP server (github_ci), which needs `actions: read`
+#   3. a plugin installed from a marketplace
+#
+# Deliberately separate from claude-bug-fix.yml so a failure here cannot
+# break the working bug-fix pipeline.
+
+on:
+  workflow_dispatch:
+  issues:
+    types: [labeled]
+
+jobs:
+  smoke:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'issues' && github.event.label.name == 'mcp-test')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    permissions:
+      contents: read
+      issues: write
+      actions: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+
+      - name: Run MCP and plugin smoke test
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          show_full_output: true
+
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+
+          prompt: |
+            This is a capability smoke test. Do not change any repository files.
+
+            Work through all four checks below, then print a single summary block
+            at the end. For each check say PASS or FAIL and give the evidence you
+            actually observed. Never report PASS for something you did not run.
+
+            CHECK 1 - custom MCP server
+            Call the tool `mcp__sequential-thinking__sequentialthinking` once, with
+            a short thought such as "smoke test of the sequential thinking server".
+            Report whether the tool existed and what it returned.
+
+            CHECK 2 - built-in CI MCP server
+            Call `mcp__github_ci__get_ci_status` for this repository. This tool is
+            only available because the workflow grants `actions: read`. Report
+            whether it existed and summarise what it returned.
+
+            CHECK 3 - plugin installation
+            The workflow installed the plugin `code-review@claude-code-plugins`.
+            Report whether the skill `/code-review:code-review` is visible to you
+            in your available skills. Do NOT invoke it - there is no pull request
+            to review here.
+
+            CHECK 4 - repository skills and rules
+            Confirm you can read `.claude/skills/update-project-memory/SKILL.md`
+            and `.claude/rules/00-core.md`, and state one specific rule from
+            00-core.md to prove the content actually loaded.
+
+            FINAL SUMMARY - print exactly this shape:
+              CHECK 1 custom MCP        : PASS or FAIL - evidence
+              CHECK 2 built-in CI MCP   : PASS or FAIL - evidence
+              CHECK 3 plugin visible    : PASS or FAIL - evidence
+              CHECK 4 repo skills/rules : PASS or FAIL - evidence
+
+          claude_args: |
+            --max-turns 25
+            --debug
+            --mcp-config '{"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]}}}'
+            --allowedTools mcp__sequential-thinking__sequentialthinking,mcp__github_ci__get_ci_status,mcp__github_ci__get_workflow_run_details,Read,Glob,Grep
