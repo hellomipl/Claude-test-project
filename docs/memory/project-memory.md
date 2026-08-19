@@ -28,6 +28,18 @@ only two standalone HTML pages (`First-file.html`, `forgot-password.html`) and n
 no `package.json` and no test harness. Treat the declared stack as the intended target, not the
 current state. See KP-0001 before running any `npm` command.
 
+## Project board (verified 2026-08-19 via GraphQL)
+
+- Board: user project **5** under `hellomipl` (`PVT_kwHOBYopsc4BTmKH`).
+- Status field: `PVTSSF_lAHOBYopsc4BTmKHzhA0F_4`.
+- Status options, exactly as named on the board:
+  `To triage` (`f971fb55`), `Pending approval` (`f75ad846`), `Ready for testing` (`856cdede`),
+  `Done` (`98236657`).
+- There is **no** `Review`, `In progress` or `Blocked` column, despite what `CLAUDE.md` and
+  `docs/context.md` imply. See KP-0005.
+- New repository issues are added to this board automatically; issues #13, #14 and #15 all carry
+  a project item without anyone adding them by hand.
+
 ## Architecture index
 
 - Module map: `docs/memory/module-map.md`

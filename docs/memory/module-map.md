@@ -21,8 +21,11 @@ repository, despite the stack declared in `CLAUDE.md`. The backend and database 
 - Board status IDs are supplied as GitHub Actions **variables**: `PROJECT_ID`, `STATUS_FIELD_ID`,
   `TO_TRIAGE_OPTION_ID`, `PENDING_APPROVAL_OPTION_ID`, `READY_FOR_TESTING_OPTION_ID`,
   `DONE_OPTION_ID`. All three workflows depend on them; changing the project board breaks all three.
-- `PENDING_APPROVAL_OPTION_ID` is the ID for the board column now named **Review**. The variable
-  name is historical — do not rename it without updating both workflows that read it.
+- `PENDING_APPROVAL_OPTION_ID` (`f75ad846`) is the ID of the board column literally named
+  **Pending approval**. Verified against the live board on 2026-08-19.
+  `CLAUDE.md` describes this column as "Review (was Pending approval)", but **no rename has
+  happened on the board** — the option is still `Pending approval`. Trust the board, not that line.
+  Do not rename the variable without updating both workflows that read it.
 - The branch prefix `fix/<issue>-` is the contract between `claude-bug-fix.yml` (writer) and
   `branch-approve-merge.yml` (reader).
 
