@@ -144,8 +144,8 @@ jobs:
             12. Do NOT merge anything to main.
             13. Keep changes minimal and focused only on this bug.
           claude_args: >-
-            --max-turns 40
-            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh issue *),Bash(npm:*),Bash(node:*)
+            --max-turns 60
+            --allowedTools Read,Edit,Write,Glob,Grep,WebFetch,WebSearch,Bash(git:*),Bash(gh issue:*),Bash(npm:*),Bash(node:*)
 
       - name: Move issue card to Review
         uses: actions/github-script@v8
