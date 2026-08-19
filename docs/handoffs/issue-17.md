@@ -3,7 +3,7 @@
 - GitHub issue: #17
 - Status: Ready for review
 - Branch: `fix/17-form-validation-errors-are-not-announced-to-screen`
-- Latest commit: (see `git log -1` on this branch after the fix commit lands)
+- Latest commit: `2b06bf6` — "fix: announce validation errors to screen readers (#17)"
 - Updated: 2026-08-19 00:10 UTC
 
 ## Objective
@@ -114,9 +114,8 @@ Memory impact: none.
 
 ## Rollback
 
-Revert the fix commit(s) on this branch (see `git log` on
-`fix/17-form-validation-errors-are-not-announced-to-screen` for the exact SHA of the ARIA-attribute
-commit, made after the `550ab7d` task-checkpoint commit). The branch is deleted on merge per
+Revert commit `2b06bf6` (the ARIA-attribute fix) on this branch, made after the `550ab7d`
+task-checkpoint commit. The branch is deleted on merge per
 `branch-approve-merge.yml`, so if this has already merged to `main`, revert the merge commit on
 `main` instead — do not attempt to recreate the deleted branch.
 
